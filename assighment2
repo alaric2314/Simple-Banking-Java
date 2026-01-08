@@ -1,0 +1,120 @@
+public Customer(String customerId, String name, String email) {
+    this.customerId = customerId;
+    this.name = name;
+    this.email = email;
+}
+public String getCustomerId() {
+    return customerId;
+}
+public void setCustomerId(String customerId) {
+    this.customerId = customerId;
+}
+public String getName() {
+    return name;
+}
+public void setName(String name) {
+    this.name = name;
+}
+public String getEmail() {
+    return email;
+}
+public void setEmail(String email) {
+    this.email = email;
+}
+@Override
+public String toString() {
+    return "Customer[ID: " + customerId + ", Name: " + name + "]";
+}
+public boolean isSameCustomer(Customer other) {
+    return this.customerId.equals(other.getCustomerId());
+}
+class BankAccount {
+    private String accountNumber;
+    private double balance;
+    private Customer owner;
+    public BankAccount(String accountNumber, Customer owner, double initialBalance) {
+        this.accountNumber = accountNumber;
+        this.owner = owner;
+        this.balance = initialBalance;
+    }
+    public String getAccountNumber() {
+        return accountNumber;
+    }
+    public double getBalance() {
+        return balance;
+    }
+    public Customer getOwner() {
+        return owner;
+    }
+    public void setOwner(Customer owner) {
+        this.owner = owner;
+    }
+    public void deposit(double amount) {
+        if (amount > 0) {
+            this.balance += amount;
+            System.out.println("Deposited $" + amount + " into Account " + accountNumber);
+        } else {
+            System.out.println("Invalid deposit amount.");
+        }
+    }
+    public void withdraw(double amount) {
+        if (amount > 0 && amount <= this.balance) {
+            this.balance -= amount;
+            System.out.println("Withdrew $" + amount + " from Account " + accountNumber);
+        } else {
+            System.out.println("Insufficient funds or invalid amount.");
+        }
+    }
+    @Override
+    public String toString() {
+        return "Account[" + accountNumber + "] | Owner: " + owner.getName() + " | Balance: $" + balance;
+    }
+}
+import java.util.ArrayList;
+import java.util.List;
+class Bank {
+    private String bankName;
+    private List<BankAccount> accounts;
+    public Bank(String bankName) {
+        this.bankName = bankName;
+        this.accounts = new ArrayList<>();
+    }
+    public void addAccount(BankAccount account) {
+        accounts.add(account);
+    }
+    public void showAllAccounts() {
+        System.out.println("\n--- Report for " + bankName + " ---");
+        for (BankAccount acc : accounts) {
+            System.out.println(acc.toString());
+        }
+        System.out.println("---------------------------------");
+    }
+}
+public class OnlineBankingApp {
+    public static void main(String[] args) {
+        Bank myBank = new Bank("Global Digital Bank");
+        Customer cust1 = new Customer("C001", "Alice Smith", "alice@example.com");
+        Customer cust2 = new Customer("C002", "Bob Jones", "bob@example.com");
+        Customer cust3 = new Customer("C001", "Alice Smith", "alice.new@example.com"); 
+        BankAccount acc1 = new BankAccount("ACC-101", cust1, 500.00);
+        BankAccount acc2 = new BankAccount("ACC-102", cust2, 1200.00);
+        myBank.addAccount(acc1);
+        myBank.addAccount(acc2);
+        myBank.showAllAccounts();
+        System.out.println("\n--- Performing Transactions ---");
+        acc1.deposit(250.00); 
+        acc2.withdraw(200.00); 
+        System.out.println("Updated " + acc1);
+        System.out.println("Updated " + acc2);
+        System.out.println("\n--- Comparing Objects ---");
+        if (acc1.getBalance() > acc2.getBalance()) {
+            System.out.println(acc1.getOwner().getName() + " has more money.");
+        } else {
+            System.out.println(acc2.getOwner().getName() + " has more money.");
+        }
+        System.out.println("Comparing Customer 1 (Alice) and Customer 2 (Bob): " + 
+                           (cust1.isSameCustomer(cust2) ? "Same Person" : "Different People"));
+        System.out.println("Comparing Customer 1 (Alice) and Customer 3 (Alice Copy): " + 
+                           (cust1.isSameCustomer(cust3) ? "Same Person" : "Different People"));
+    }
+}
