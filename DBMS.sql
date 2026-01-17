@@ -1,0 +1,15 @@
+CREATE TABLE Customer (
+id VARCHAR(50) PRIMARY KEY,
+name VARCHAR(100),
+email VARCHAR(100)
+);
+CREATE TABLE Bank (
+bank_id SERIAL PRIMARY KEY,
+bank_name VARCHAR(100) NOT NULL
+);
+CREATE TABLE BankAccount (
+account_number VARCHAR(50) PRIMARY KEY,
+balance DOUBLE PRECISION DEFAULT 0.0,
+owner_id VARCHAR(50) REFERENCES Customer(id),
+bank_id INTEGER REFERENCES Bank(bank_id)
+);
