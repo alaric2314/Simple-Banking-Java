@@ -1,0 +1,111 @@
+import java.util.ArrayList;
+import java.util.List;
+import java.sql.*;
+class Customer {
+    private String customerId;
+    private String name;
+    private String email;
+    public Customer(String customerId, String name, String email) {
+        this.customerId = customerId;
+        this.name = name;
+        this.email = email;
+    }
+    public String getCustomerId() { return customerId; }
+    public String getName() { return name; }
+    public String getEmail() { return email; }
+    @Override
+    public String toString() {
+        return "Customer[ID: " + customerId + ", Name: " + name + "]";
+    }
+    public boolean isSameCustomer(Customer other) {
+        return this.customerId.equals(other.getCustomerId());
+    }
+}
+class BankAccount {
+    private String accountNumber;
+    private double balance;
+    private Customer owner;
+    public BankAccount(String accountNumber, Customer owner, double initialBalance) {
+        this.accountNumber = accountNumber;
+        this.owner = owner;
+        this.balance = initialBalance;
+    }
+    public double getBalance() { return balance; }
+    public Customer getOwner() { return owner; }
+    public void deposit(double amount) {
+        if (amount > 0) {
+            this.balance += amount;
+            System.out.println("Deposited $" + amount + " into Account " + accountNumber);
+        }
+    }
+    public void withdraw(double amount) {
+        if (amount > 0 && amount <= this.balance) {
+            this.balance -= amount;
+            System.out.println("Withdrew $" + amount + " from Account " + accountNumber);
+        }
+    }
+    @Override
+    public String toString() {
+        return "Account[" + accountNumber + "] | Owner: " + owner.getName() + " | Balance: $" + balance;
+    }
+}
+class Bank {
+    private String bankName;
+    private List<BankAccount> accounts = new ArrayList<>();
+    public Bank(String bankName) {
+        this.bankName = bankName;
+    }
+    public void addAccount(BankAccount account) {
+        accounts.add(account);
+    }
+    public void showAllAccounts() {
+        System.out.println("\n--- Report for " + bankName + " ---");
+        for (BankAccount acc : accounts) {
+            System.out.println(acc.toString());
+        }
+    }
+}
+class DbHelper {
+    String url = "jdbc:postgresql://localhost:5432/postgres";
+    String user = "postgres";
+    String pass = "1234";
+    public void addCustomer(String id, String name, String email) {
+        String sql = "INSERT INTO customers VALUES (?, ?, ?)";
+        try (Connection conn = DriverManager.getConnection(url, user, pass);
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, id);
+            stmt.setString(2, name);
+            stmt.setString(3, email);
+            stmt.executeUpdate();
+            System.out.println("Database: Saved " + name);
+        } catch (SQLException e) {
+            System.out.println("DB Error (Add): " + e.getMessage());
+        }
+    }
+    public void printCustomers() {
+        String sql = "SELECT * FROM customers";
+        try (Connection conn = DriverManager.getConnection(url, user, pass);
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                System.out.println("DB Record -> ID: " + rs.getString("id") + " | Name: " + rs.getString("name"));
+            }
+        } catch (SQLException e) {
+            System.out.println("DB Error (Read): " + e.getMessage());
+        }
+    }
+}
+class OnlineBankingApp {
+    public static void main(String[] args) {
+        Bank myBank = new Bank("Global Digital Bank");
+        Customer cust1 = new Customer("C001", "Alice Smith", "alice@example.com");
+        BankAccount acc1 = new BankAccount("ACC-101", cust1, 500.00);
+        myBank.addAccount(acc1);
+        acc1.deposit(250.00);
+        myBank.showAllAccounts();
+        System.out.println("\n--- Database Operations ---");
+        DbHelper db = new DbHelper();
+        db.addCustomer("C001", "Alice Smith", "alice@example.com");
+        db.printCustomers();
+    }
+}
