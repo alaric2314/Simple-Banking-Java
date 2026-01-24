@@ -1,0 +1,107 @@
+
+CREATE TABLE Users (
+user_id INT PRIMARY KEY,
+Name VARCHAR(100) NOT NULL,
+email VARCHAR(100) UNIQUE,
+role VARCHAR(50),
+Salary INT
+);
+CREATE TABLE Projects (
+project_id INT PRIMARY KEY,
+project_name VARCHAR(150),
+start_date DATE,
+end_date DATE,
+status VARCHAR(50)
+);
+CREATE TABLE Tasks (
+task_id INT PRIMARY KEY,
+title VARCHAR(200),
+description TEXT,
+priority VARCHAR(20),
+due_date DATE,
+status VARCHAR(50),
+project_id INT,
+user_id INT,
+FOREIGN KEY (project_id) REFERENCES Projects(project_id),
+FOREIGN KEY (user_id) REFERENCES Users(user_id)
+);
+ALTER TABLE Users ADD phone_number VARCHAR(20);
+ALTER TABLE Tasks RENAME COLUMN title TO task_title;
+ALTER TABLE Tasks ALTER COLUMN status SET DEFAULT 'Pending';
+ALTER TABLE Tasks DROP COLUMN priority;
+
+INSERT INTO Users VALUES (1, ' Alice ', 'Smith@gmail.com', 'Sales', 50000);
+INSERT INTO Users VALUES (2, 'Bob', 'Jones@gmail.com', 'IT', 60000);
+INSERT INTO Users VALUES (3, 'Charlie', 'Brown@gmail.com', 'Sales', 45000);
+INSERT INTO Users VALUES (4, 'David', 'Wilson@gmail.com', 'Marketing', 70000);
+INSERT INTO Users VALUES (5, 'Eve', 'Davis@gmail.com', 'IT', 80000);
+
+INSERT INTO Projects (project_id, project_name, start_date, end_date, status) VALUES
+(101, 'Website Redesign', '2023-01-15', '2023-06-30', 'Completed'),
+(102, 'Mobile App', '2023-03-01', '2023-12-31', 'Ongoing');
+
+INSERT INTO Tasks (task_id, task_title, description, due_date, status, project_id, user_id) VALUES
+(1, 'Fix Login Bug', 'Resolve auth issues', '2023-04-10', 'Completed', 102, 1),
+(2, 'API Design', 'Define endpoints', '2023-04-15', 'In Progress', 102, 2),
+(3, 'Database Cleanup', 'Remove old logs', '2023-05-01', 'Pending', 103, 2),
+(4, 'UI Mockups', 'Create Figma files', '2023-04-05', 'Completed', 101, 4),
+(5, 'Refactor CSS', 'Clean up styles', '2023-04-20', 'In Progress', 102, 2);
+
+SELECT * FROM Users WHERE (role = 'Sales' AND Salary > 45000);
+SELECT * FROM Users WHERE user_id = 3;
+SELECT * FROM Users WHERE Name LIKE 'A%';
+SELECT * FROM Users WHERE (role = 'IT' OR 'C%');
+
+SELECT CONCAT(Name, ' ', user_id) FROM Users;
+SELECT UPPER(user_id) FROM Users;
+SELECT LOWER(role) FROM Users;
+SELECT TRIM(Name) FROM Users;
+SELECT SUBSTRING(role, 1, 3) FROM Users;
+
+UPDATE Users SET Salary = 65000 WHERE Name = 'Bob';
+UPDATE Users SET role = 'Marketing' WHERE user_id = 3;
+UPDATE Users SET Salary = Salary + 1000 WHERE role = 'Sales';
+UPDATE Users SET email = 'Smith@gmail.com' WHERE user_id = 1;
+UPDATE Users SET Salary = 50000 WHERE Salary < 50000;
+
+DELETE FROM Users WHERE user_id = 5;
+DELETE FROM Users WHERE role = 'IT';
+DELETE FROM Users WHERE Salary < 40000;
+DELETE FROM Users WHERE (Name = 'Alice' or role = 'Marketing');
+
+SELECT role, SUM(Salary)
+FROM Users
+GROUP BY role;
+
+SELECT status, AVG(Salary)
+FROM Tasks
+         JOIN Users ON Tasks.user_id = Users.user_id
+GROUP BY status;
+
+SELECT user_id, COUNT(task_id)
+FROM Tasks
+GROUP BY user_id
+HAVING COUNT(task_id) > 5;
+
+SELECT Name, COUNT(task_id)
+FROM Users
+         JOIN Tasks ON Users.user_id = Tasks.user_id
+GROUP BY Name;
+
+SELECT Name FROM Users
+WHERE Salary > (SELECT AVG(Salary) FROM Users);
+
+SELECT Name FROM Users
+WHERE user_id IN (SELECT user_id FROM Tasks WHERE status = 'Ongoing');
+
+SELECT Name, Salary FROM Users u1
+WHERE Salary > (SELECT AVG(Salary) FROM Users u2 WHERE u1.role = u2.role);
+
+SELECT project_name FROM Projects p
+WHERE EXISTS (SELECT 1 FROM Tasks t WHERE t.project_id = p.project_id);
+
+SELECT Name, Salary FROM Users
+WHERE Salary >= ALL (SELECT Salary FROM Users);
+
+SELECT * FROM Users
+WHERE (Name, email) = (SELECT Name, email FROM Users WHERE user_id = 1);
