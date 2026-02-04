@@ -1,0 +1,205 @@
+import java.util.ArrayList;
+import java.util.List;
+import java.sql.*;
+import java.io.*;
+import com.sun.net.httpserver.HttpServer;
+import com.sun.net.httpserver.HttpHandler;
+import com.sun.net.httpserver.HttpExchange;
+import java.util.stream.Collectors;
+import java.net.InetSocketAddress;
+
+class Customer {
+    private String customerId;
+    private String name;
+    private String email;
+
+    public Customer(String customerId, String name, String email) {
+        this.customerId = customerId;
+        this.name = name;
+        this.email = email;
+    }
+
+    public String getCustomerId() {
+        return customerId;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    @Override
+    public String toString() {
+        return "Customer[ID: " + customerId + ", Name: " + name + "]";
+    }
+}
+
+class BankAccount {
+    private String accountNumber;
+    private double balance;
+    private Customer owner;
+
+    public BankAccount(String accountNumber, Customer owner, double initialBalance) {
+        this.accountNumber = accountNumber;
+        this.owner = owner;
+        this.balance = initialBalance;
+    }
+
+    public double getBalance() { return balance; }
+
+    public void deposit(double amount) {
+        if (amount > 0) {
+            this.balance += amount;
+            System.out.println("Deposited $" + amount + " into Account " + accountNumber);
+        }
+    }
+
+    @Override
+    public String toString() {
+        return "Account[" + accountNumber + "] | Owner: " + owner.getName() + " | Balance: $" + balance;
+    }
+}
+
+class Bank {
+    private String bankName;
+    private List<BankAccount> accounts = new ArrayList<>();
+
+    public Bank(String bankName) {
+        this.bankName = bankName;
+    }
+
+    public void addAccount(BankAccount account) {
+        accounts.add(account);
+    }
+
+    public void showAllAccounts() {
+        System.out.println("\n--- Report for " + bankName + " ---");
+        for (BankAccount acc : accounts) {
+            System.out.println(acc.toString());
+        }
+    }
+}
+
+class DbHelper {
+    private static final String URL = "jdbc:postgresql://localhost:5432/postgres";
+    private static final String USER = "postgres";
+    private static final String PASS = "Azafaza237";
+
+    public void addCustomer(String id, String name, String email) {
+        String sql = "INSERT INTO customer (id, name, email) VALUES (?, ?, ?)";
+        try (Connection conn = DriverManager.getConnection(URL, USER, PASS);
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, id);
+            stmt.setString(2, name);
+            stmt.setString(3, email);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            System.out.println("DB Error: " + e.getMessage());
+        }
+    }
+    public void printCustomers() {
+        String sql = "SELECT id, name, email FROM customer";
+        try (Connection conn = DriverManager.getConnection(URL, USER, PASS);
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                System.out.println("DB Record -> ID: " + rs.getString("id") + " | Name: " + rs.getString("name"));
+            }
+        } catch (SQLException e) {
+            System.out.println("DB Error: " + e.getMessage());
+        }
+    }
+}
+
+ class SimpleBankingServer {
+    private static final String DB_URL = "jdbc:postgresql://localhost:5432/postgres";
+    private static final String DB_USER = "postgres";
+    private static final String DB_PASS = "Azafaza237";
+
+    public static void main(String[] args) throws IOException {
+        HttpServer server = HttpServer.create(new InetSocketAddress(8000), 0);
+        server.createContext("/customers", new CustomerHandler());
+        server.setExecutor(null);
+        server.start();
+
+        System.out.println("REST API Server running on http://localhost:8000/customers");
+
+        Bank myBank = new Bank("Global Digital Bank");
+        Customer cust1 = new Customer("C001", "Alice Smith", "alice@example.com");
+        BankAccount acc1 = new BankAccount("ACC-101", cust1, 500.00);
+        myBank.addAccount(acc1);
+        myBank.showAllAccounts();
+    }
+
+    static class CustomerHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            String method = exchange.getRequestMethod();
+            String response = "";
+
+            if ("GET".equals(method)) {
+                response = getCustomersFromDb();
+                exchange.getResponseHeaders().set("Content-Type", "application/json");
+                exchange.sendResponseHeaders(200, response.getBytes().length);
+            } else if ("POST".equals(method)) {
+                InputStream is = exchange.getRequestBody();
+                String body = new BufferedReader(new InputStreamReader(is)).lines().collect(Collectors.joining());
+                response = saveCustomerToDb(body);
+                exchange.sendResponseHeaders(201, response.getBytes().length);
+            }
+
+            OutputStream os = exchange.getResponseBody();
+            os.write(response.getBytes());
+            os.close();
+        }
+
+        private String getCustomersFromDb() {
+            StringBuilder json = new StringBuilder("[");
+            String query = "SELECT id, name, email FROM customer";
+            try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASS);
+                 Statement stmt = conn.createStatement();
+                 ResultSet rs = stmt.executeQuery(query)) {
+                while (rs.next()) {
+                    if (json.length() > 1) json.append(",");
+                    json.append("{")
+                            .append("\"id\":\"").append(rs.getString("id")).append("\",")
+                            .append("\"name\":\"").append(rs.getString("name")).append("\",")
+                            .append("\"email\":\"").append(rs.getString("email")).append("\"")
+                            .append("}");
+                }
+            } catch (Exception e) {
+                return "{\"error\":\"" + e.getMessage() + "\"}";
+            }
+            json.append("]");
+            return json.toString();
+        }
+
+        private String saveCustomerToDb(String body) {
+            try {
+                String id = extractValue(body, "id");
+                String name = extractValue(body, "name");
+                String email = extractValue(body, "email");
+                String sql = "INSERT INTO customer (id, name, email) VALUES (?, ?, ?)";
+                try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASS);
+                     PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                    pstmt.setString(1, id);
+                    pstmt.setString(2, name);
+                    pstmt.setString(3, email);
+                    pstmt.executeUpdate();
+                }
+                return "{\"message\":\"Customer added!\"}";
+            } catch (Exception e) {
+                return "{\"error\":\"" + e.getMessage() + "\"}";
+            }
+        }
+
+        private String extractValue(String json, String key) {
+            int start = json.indexOf("\"" + key + "\":\"") + key.length() + 4;
+            int end = json.indexOf("\"", start);
+            return json.substring(start, end);
+        }
+    }
+}
